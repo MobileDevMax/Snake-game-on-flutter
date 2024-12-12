@@ -1,0 +1,161 @@
+import 'package:flutter/material.dart';
+import 'dart:async';
+import 'dart:math';
+
+void main() => runApp(SnakeGame());
+
+class SnakeGame extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Snake Game',
+      home: SnakeHome(),
+    );
+  }
+}
+
+class SnakeHome extends StatefulWidget {
+  @override
+  _SnakeHomeState createState() => _SnakeHomeState();
+}
+
+class _SnakeHomeState extends State<SnakeHome> {
+  static const int gridSize = 20;
+  List<Offset> snake = [
+    Offset(3, 3),
+    Offset(3, 2),
+    Offset(3, 1)
+  ];
+  Offset food = Offset(10, 10);
+  String direction = 'DOWN';
+  Timer? timer;
+
+  void startGame() {
+    timer?.cancel();
+    snake = [
+      Offset(3, 3),
+      Offset(3, 2),
+      Offset(3, 1)
+    ];
+    spawnFood();
+    direction = 'DOWN';
+    timer = Timer.periodic(Duration(milliseconds: 200), (Timer timer) {
+      moveSnake();
+    });
+  }
+
+  void spawnFood() {
+    Random random = Random();
+    food = Offset(random.nextInt(gridSize).toDouble(), random.nextInt(gridSize).toDouble());
+  }
+
+  void moveSnake() {
+    setState(() {
+      Offset currentHead = snake.first;
+      Offset newHead;
+
+      switch (direction) {
+        case 'UP':
+          newHead = Offset(currentHead.dx, currentHead.dy - 1);
+          break;
+        case 'DOWN':
+          newHead = Offset(currentHead.dx, currentHead.dy + 1);
+          break;
+        case 'LEFT':
+          newHead = Offset(currentHead.dx - 1, currentHead.dy);
+          break;
+        case 'RIGHT':
+          newHead = Offset(currentHead.dx + 1, currentHead.dy);
+          break;
+        default:
+          newHead = currentHead;
+      }
+
+      if (newHead.dx < 0 || newHead.dx >= gridSize || newHead.dy < 0 || newHead.dy >= gridSize || snake.contains(newHead)) {
+        // Game over!
+        timer?.cancel();
+        return;
+      }
+
+      snake.insert(0, newHead);
+      if (newHead == food) {
+        spawnFood();
+      } else {
+        snake.removeLast();
+      }
+    });
+  }
+
+  void changeDirection(String newDirection) {
+    if ((newDirection == 'UP' && direction != 'DOWN') ||
+        (newDirection == 'DOWN' && direction != 'UP') ||
+        (newDirection == 'LEFT' && direction != 'RIGHT') ||
+        (newDirection == 'RIGHT' && direction != 'LEFT')) {
+      direction = newDirection;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Snake Game')),
+      body: GestureDetector(
+        onVerticalDragUpdate: (details) {
+          if (details.delta.dy < 0) changeDirection('UP');
+          if (details.delta.dy > 0) changeDirection('DOWN');
+        },
+        onHorizontalDragUpdate: (details) {
+          if (details.delta.dx < 0) changeDirection('LEFT');
+          if (details.delta.dx > 0) changeDirection('RIGHT');
+        },
+        child: Center(
+          child: Container(
+            width: 400,
+            height: 400,
+            decoration: BoxDecoration(
+              border: Border.all(),
+              color: Colors.white,
+            ),
+            child: CustomPaint(
+              painter: SnakePainter(snake: snake, food: food),
+            ),
+          ),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: startGame,
+        child: Icon(Icons.play_arrow),
+      ),
+    );
+  }
+}
+
+class SnakePainter extends CustomPainter {
+  final List<Offset> snake;
+  final Offset food;
+
+  SnakePainter({required this.snake, required this.food});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    Paint paint = Paint()..color = Colors.green;
+
+    for (Offset segment in snake) {
+      canvas.drawRect(
+        Rect.fromLTWH(segment.dx * 20, segment.dy * 20, 20, 20),
+        paint,
+      );
+    }
+
+    paint.color = Colors.green;
+    canvas.drawRect(
+      Rect.fromLTWH(food.dx * 20, food.dy * 20, 20, 20),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return true;
+  }
+}
